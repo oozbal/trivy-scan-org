@@ -1,11 +1,7 @@
 #!/bin/bash
-
-# Returns all images and tags associated with a Docker Hub organization account.
-# Requires 'jq': https://stedolan.github.io/jq/
-
 # set username, password, and organization
 UNAME=""
-UPASS=""
+UPASS=""   #user password or pat (dckr_****).
 ORG=""
 
 SCAN_DATE=$(date '+%F')
@@ -24,7 +20,7 @@ echo
 echo "Retrieving token ..."
 TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "'${UNAME}'", "password": "'${UPASS}'"}' https://hub.docker.com/v2/users/login/ | jq -r .token)
 
-# get list of repositories
+# Retrieve repositories under organization
 echo "Retrieving repository list ..."
 REPO_LIST=$(curl -s -H "Authorization: JWT ${TOKEN}" https://hub.docker.com/v2/repositories/${ORG}/?page_size=100 | jq -r '.results|.[]|.name')
 
@@ -34,7 +30,7 @@ echo "Images and tags for organization: ${ORG}"
 echo
 for i in ${REPO_LIST}
 do
-  # tags
+  # retrieve last updated image tag of each repository.
   IMAGE_TAGS=$(curl -s -H "Authorization: JWT ${TOKEN}" https://hub.docker.com/v2/repositories/${ORG}/${i}/tags/?page_size=100 | jq -r '.results[] | [ .name , .tag_last_pushed ] | @tsv' | sed -E 's/(.*:[0-9]{2})\..*Z/\1/g' |sort -t$'\t' -k2 -nr |awk '{print $1}' |head -n 1)
   for j in ${IMAGE_TAGS}
   do
